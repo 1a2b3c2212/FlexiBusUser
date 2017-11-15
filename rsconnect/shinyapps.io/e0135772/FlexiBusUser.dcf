@@ -1,0 +1,12 @@
+name: FlexiBusUser
+title: FlexiBusUser
+username:
+account: e0135772
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 235452
+bundleId: 1077323
+url: https://e0135772.shinyapps.io/FlexiBusUser/
+when: 1510774754.04786
+asMultiple: FALSE
+asStatic: FALSE
