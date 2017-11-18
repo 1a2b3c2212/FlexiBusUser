@@ -10,12 +10,12 @@
 
 .modal-body {
   color:#FF8115;
-  font-size: 3vh ;
+  font-size: 15px;
 	overflow: auto;
 }
 .modal-header {
   color: #153D67;
-  font-size: 4vh;
+  font-size: 20px;
 	overflow: auto;
 }
 
@@ -25,12 +25,12 @@
 	margin-right: auto;
 	background-color: #153D67;
 	padding:25px 40px;
-	font-size: 3vh;
+	font-size: 20px;
 }
 
 label.control-label, .selectize-control.single{
 	color: #FF8115;
-	font-size:4vh;
+	font-size:20px;
 }
 
 img {

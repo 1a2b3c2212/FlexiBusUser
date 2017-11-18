@@ -97,7 +97,6 @@ updateServiceMatrix <- function(){
   }
   
   currentList = list()
-  futureList = list()
   
   #Obtaining the route for each bus service
   for(i in 1:length(busServices)){
@@ -105,50 +104,37 @@ updateServiceMatrix <- function(){
     date2 = route[[i]][[2]]$effDate
     currentDate <- Sys.Date()
     routeStops = list()
-    futureStops = list()
-    numFutureStops <- list()
     
     if(date1>date2){
-      if(currentDate > date1){
+      if(currentDate >= date1){
         numStops <- route[[i]][[1]]$stops[2:length(route[[i]][[1]]$stops)]
-        numFutureStops <- NULL
         for(j in length(numStops)){
           routeStops[j] <- numStops[[j]]
-          #no stops will be added to futureStops till a newer route is updated
-          futureStops = NULL 
-        }
-      } else if (date1> currentDate & currentDate >date2){
-        numStops <- route[[i]][[2]]$stops[2:length(route[[i]][[1]]$stops)]
-        numFutureStops <- route[[i]][[1]]$stops[2:length(route[[i]][[1]]$stops)]
-        for(j in length(numStops)){
-          routeStops[j] <- route[[i]][[2]]$stops[[j]]
-        }
-        for(a in length(numFutureStops)){
-          futureStops[a] <- route[[i]][[1]]$stops[[a]]
         }
       }
-    } else {
-      if(currentDate > date2){
-        numStops <- route[[i]][[2]]$stops[2:length(route[[i]][[1]]$stops)]
-        numFutureStops <- NULL
-        for(j in length(route[[i]][[2]]$stops)){
+      else if (date1> currentDate & currentDate >date2){
+        numStops <- route[[i]][[2]]$stops[2:length(route[[i]][[2]]$stops)]
+        for(j in length(numStops)){
           routeStops[j] <- route[[i]][[2]]$stops[[j]]
-          futureStops = NULL
         }
-      } else if (date2> currentDate & currentDate >date1){
-        numFutureStops <- route[[i]][[2]]$stops[2:length(route[[i]][[1]]$stops)]
+      }
+    } 
+    else {
+      if(currentDate >= date2){
+        numStops <- route[[i]][[2]]$stops[2:length(route[[i]][[2]]$stops)]
+        for(j in length(numStops)){
+          routeStops[j] <- numStops[[j]]
+        }
+      } 
+      else if (date2> currentDate & currentDate >date1){
         numStops <- route[[i]][[1]]$stops[2:length(route[[i]][[1]]$stops)]
         for(j in length(numStops)){
-          routeStops[j] <- route[[i]][[1]]$stops[[j]]
-        }
-        for(a in length(numFutureStops)){
-          futureStops[j] <- route[[i]][[2]]$stops[[a]]
+          routeStops[j] <- numStops[[j]]
         }
       }
     }
     #initialize the list of stops for both current and future routes
     listStops <-list()
-    listFutureStops <- list()
     
     #for current route
     for(k in 1:length(numStops)){
@@ -160,15 +146,7 @@ updateServiceMatrix <- function(){
       currentList <- qpcR:::cbind.na(currentList, listStops)
     }
     
-    #for future routes
-    for(b in 1:length(numFutureStops)){
-      listFutureStops[b] <- numFutureStops[b]
-    }
-    if(i == 1){
-      futureList <- cbind(futureList, listFutureStops)
-    } else {
-      futureList <- qpcR:::cbind.na(futureList, listFutureStops)
-    }
+    
   }
   
   #Initialize the dataframe heading
@@ -177,11 +155,6 @@ updateServiceMatrix <- function(){
   currentList <- rbind(busColNames, currentList)
   colnames(currentList) <- busServices
   
-  futureList <- rbind(busColNames, futureList)
-  colnames(futureList) <- busServices
-  
-  #futureRoute <- futureRoute$stops
-  #futureRoute[1] <- NULL
   
   #obtaining the bus stop ID
   stops <- GET(paste0("https://bt3103-ef12e.firebaseio.com/stops.json"))
@@ -198,6 +171,7 @@ updateServiceMatrix <- function(){
   
   #filling in the matrix with the bus services
   serviceNumber = 1
+  #View(currentList)
   for(i in 1:length(currentList)){ 
     stops <- c()
     for (j in 1:length(currentList[[i]])){
@@ -210,17 +184,29 @@ updateServiceMatrix <- function(){
     busStop <- match(stops, namesOfStops)
     for (m in 1:length(busStop)){
       for (n in 1:length(busStop)){
-        if (m>=n){ 
-          
-        } else {
+        if (m>n){ 
+          #do nothing
+        } 
+        else if (m==n){
+          #do nothing
+        }
+        else {
           if(isTRUE(current[busStop[m],busStop[n]] == "Off")){
             current[busStop[m],busStop[n]] <- busServices[serviceNumber]
-          } else {
-            if (busStop[m] == busStop[n]){
-            } else {
-              current[busStop[m],busStop[n]] <- busServices[serviceNumber]
-            }
+          } 
+          else if(isTRUE(current[busStop[m],busStop[n]] == "HELP LA!")){
+            #do nothing
           }
+          #if there exist two or more services bteween start and end point
+          else if(isTRUE(current[busStop[m],busStop[n]] != "Off") || isTRUE(current[busStop[m],busStop[n]] != "HELP LA!") || isTRUE(current[busStop[m],busStop[n]] != "Opp")){
+            if(grepl(busServices[serviceNumber], current[busStop[m],busStop[n]], fixed = TRUE)){
+              #do nothing as bus service is pasted inside current
+            } else {
+              #paste bus service into current
+              current[busStop[m],busStop[n]] <- paste(current[busStop[m],busStop[n]],busServices[serviceNumber], sep = ",")
+              
+            }
+          } 
         }
       }
     }
@@ -230,13 +216,14 @@ updateServiceMatrix <- function(){
   return (t(current))
 }
 
+
 ui <- shinyUI(fluidPage(
   includeCSS("styles.css"),
   theme = shinytheme("united"),
-  img(src="bus.jpeg"),
+  img(src="bus_new.jpeg"),
   fluidRow(
-    column(width=6,offset=3,selectInput("frommenu","From:",c("",returnStops()), width = "100%")),
-    column(width=6,offset=3,selectInput("tomenu","To:",c("",returnStops()), width = "100%"),br(), br())),
+    column(width=6,offset=3,selectInput("frommenu","From:",sort(unlist(returnStops())), width = "100%",selectize = FALSE)),
+    column(width=6,offset=3,selectInput("tomenu","To:",sort(unlist(returnStops())), width = "100%",selectize = FALSE),br(), br())),
     actionButton("button", "Let's Go", icon("bus")),
     textOutput("text"),
     textOutput("text2")
@@ -247,6 +234,7 @@ server <- function(input, output, session) {
   
   
   oracle <- as.data.frame(updateServiceMatrix())
+  
   x<-reactive(input$frommenu)
   
   y<-reactive(input$tomenu)
@@ -261,12 +249,6 @@ server <- function(input, output, session) {
     if (y()==x()){
       msgg<-"Please include different start and end locations"
       showModal(modalDialog(title = "No such bus",msgg,easyClose = TRUE))
-      #toggleModal(session, "modalExample2", toggle="toggle")
-    }
-    
-    if (y() == "" | x() == ""){
-      msgg<-"Please fill in both start and end locations"
-      showModal(modalDialog(title = "Missing Input",msgg,easyClose = TRUE))
     }
     
     # if start and end different
@@ -277,18 +259,58 @@ server <- function(input, output, session) {
       startlocations<-c(x(), timing)
       endlocations<-c(y(), timing)
       
-      msg <- oracle[[as.numeric(getStopByName(x())$stopID)]][[as.numeric(getStopByName(y())$stopID)]]
+      msg <- toupper(oracle[[as.numeric(getStopByName(x())$stopID)]][[as.numeric(getStopByName(y())$stopID)]])
       
-      # smart Return
-      if(msg == "Off"){
-        msg <- paste0("Try setting '", getStopNameByID(alternatives[as.numeric(getStopByName(x())$stopID)]),"' as your start location.")
+      # smart Return (191117: updated code from line 287 to 327)
+      if(msg == "OFF"){
+        
+        xStopID <- as.numeric(getStopByName(x())$stopID)
+        yStopID <- as.numeric(getStopByName(y())$stopID)
+        altXStopID <- alternatives[[as.numeric(getStopByName(x())$stopID)]]
+        altYStopID <- alternatives[[as.numeric(getStopByName(y())$stopID)]]
+        
+        #example: from PGP to EA
+        if(is.null(altXStopID)){
+          if(is.null(altYStopID)){
+            msg <- paste0("There is no direct service available for your destination.")
+          } 
+          else if (oracle[[xStopID]][[altYStopID]] != "Off"){
+            msg <- paste0("Try setting ", getStopNameByID(altYStopID)," as your end location.")
+          }
+        }
+        else if(is.null(altYStopID)){
+          if(is.null(altXStopID)){
+            msg <- paste0("There is no direct service available for your destination.")
+          } 
+          else if (oracle[[altXStopID]][[yStopID]] != "Off"){
+            msg <- paste0("Try setting ", getStopNameByID(altXStopID)," as your end location.")
+          }
+        }
+        else if (altXStopID == yStopID){
+          msg <- paste0("Your chosen end destination is just opposite of you. ")
+        }
+        else {
+          if(oracle[[altXStopID]][[yStopID]] != "Off"){
+            msg <- paste0("Try setting ", getStopNameByID(altXStopID)," as your start location.") 
+          }
+          else if (oracle[[xStopID]][[altYStopID]] != "Off"){
+            msg <- paste0("Try setting ", getStopNameByID(altYStopID)," as your end location.")
+          }
+          else if (oracle[[altXStopID]][[altYStopID]] != "Off"){
+            msg <- paste0("Try setting ", getStopNameByID(altXStopID), " and ", getStopNameByID(altYStopID)," as your start and end location.")
+          } 
+          else {
+            msg <- paste0("There is no direct service available for your destination.")
+          }
+        }
       }
       
-      ### Comment for testing purposes
-      # a<-upload(startlocations, projectURL = "https://bt3103-ef12e.firebaseio.com/", directory="Start Locations")
-      # b<-upload(endlocations, projectURL = "https://bt3103-ef12e.firebaseio.com/", directory="End Locations")
-      # toggleModal(session, "modalExample", toggle="toggle")
-      showModal(modalDialog(title = "Your Bus Is",toupper(msg),easyClose = TRUE))
+      ### Comment if testing
+      # Upload travel request
+      a<-upload(startlocations, projectURL = "https://bt3103-ef12e.firebaseio.com/", directory="Start Locations")
+      b<-upload(endlocations, projectURL = "https://bt3103-ef12e.firebaseio.com/", directory="End Locations")
+      
+      showModal(modalDialog(title = "Your Bus Is",msg,easyClose = TRUE))
     }
   })
 }
