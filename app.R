@@ -35,6 +35,7 @@ alternatives[13] <- 25
 alternatives[25] <- 13
 alternatives[21] <- 28
 alternatives[28] <- 21
+alternatives[31] <- "does not exist"
 
 # Get a stop name based on the stopID
 getStopNameByID <- function(stopID){
@@ -261,7 +262,7 @@ server <- function(input, output, session) {
       
       msg <- toupper(oracle[[as.numeric(getStopByName(x())$stopID)]][[as.numeric(getStopByName(y())$stopID)]])
       
-      # smart Return (191117: updated code from line 287 to 327)
+      # smart Return 
       if(msg == "OFF"){
         
         xStopID <- as.numeric(getStopByName(x())$stopID)
@@ -269,37 +270,54 @@ server <- function(input, output, session) {
         altXStopID <- alternatives[[as.numeric(getStopByName(x())$stopID)]]
         altYStopID <- alternatives[[as.numeric(getStopByName(y())$stopID)]]
         
-        #example: from PGP to EA
-        if(is.null(altXStopID)){
-          if(is.null(altYStopID)){
-            msg <- paste0("There is no direct service available for your destination.")
-          } 
-          else if (oracle[[xStopID]][[altYStopID]] != "Off"){
-            msg <- paste0("Try setting ", getStopNameByID(altYStopID)," as your end location.")
-          }
-        }
-        else if(is.null(altYStopID)){
+        if(is.null(altXStopID) || is.null(altYStopID)){
           if(is.null(altXStopID)){
-            msg <- paste0("There is no direct service available for your destination.")
-          } 
-          else if (oracle[[altXStopID]][[yStopID]] != "Off"){
-            msg <- paste0("Try setting ", getStopNameByID(altXStopID)," as your end location.")
+            if(is.null(altYStopID)){
+              #example: from PGP to EA (extreme case)
+              msg <- paste0("There is no direct service available for your destination.")
+            }
+            else if (oracle[[xStopID]][[altYStopID]] != "Off"){
+              #example: Utown to Ventus(Opp. LT13) 
+              msg <- paste0("Try setting ", getStopNameByID(altYStopID)," as your end location.")
+            }
+            else {
+              #if all else fails
+              msg <- paste0("There is no direct service available for your destination.")
+            }
+          }
+          else if(is.null(altYStopID)){
+            if(is.null(altXStopID)){
+              msg <- paste0("There is no direct service available for your destination.")
+            }
+            else if (oracle[[altXStopID]][[yStopID]] != "Off"){
+              #Example: Biz2 to EA
+              msg <- paste0("Try setting ", getStopNameByID(altXStopID)," as your start location.")
+            }
+            else {
+              #if all else fails
+              msg <- paste0("There is no direct service available for your destination.")
+            }
           }
         }
         else if (altXStopID == yStopID){
+          #Example: YIH to opp . YIH
           msg <- paste0("Your chosen end destination is just opposite of you. ")
         }
         else {
           if(oracle[[altXStopID]][[yStopID]] != "Off"){
+            #Example: opp.University Hall to LT13
             msg <- paste0("Try setting ", getStopNameByID(altXStopID)," as your start location.") 
           }
           else if (oracle[[xStopID]][[altYStopID]] != "Off"){
+            #Example: University Hall to Ventus(opp.LT13)
             msg <- paste0("Try setting ", getStopNameByID(altYStopID)," as your end location.")
           }
           else if (oracle[[altXStopID]][[altYStopID]] != "Off"){
+            #Example: opp.University Hall to Ventus(opp.LT13)
             msg <- paste0("Try setting ", getStopNameByID(altXStopID), " and ", getStopNameByID(altYStopID)," as your start and end location.")
           } 
           else {
+            #if all else fails
             msg <- paste0("There is no direct service available for your destination.")
           }
         }

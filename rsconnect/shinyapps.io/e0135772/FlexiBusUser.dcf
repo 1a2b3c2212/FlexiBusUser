@@ -5,8 +5,8 @@ account: e0135772
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 235452
-bundleId: 1083361
+bundleId: 1084096
 url: https://e0135772.shinyapps.io/FlexiBusUser/
-when: 1511037572.04473
+when: 1511094230.03088
 asMultiple: FALSE
 asStatic: FALSE
